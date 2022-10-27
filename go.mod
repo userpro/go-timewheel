@@ -1,4 +1,4 @@
-module github.com/rfyiamcool/go-timewheel
+module github.com/userpro/go-timewheel
 
 go 1.14
 
