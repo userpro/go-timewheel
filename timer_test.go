@@ -209,6 +209,32 @@ func TestTickerSecond(t *testing.T) {
 	assert.Greater(t, incr, 100)
 }
 
+func TestTickerSecondLess(t *testing.T) {
+	tw, err := NewTimeWheel(10*time.Millisecond, 10000)
+	assert.Nil(t, err)
+
+	tw.Start()
+	defer tw.Stop()
+
+	var (
+		timeout = time.After(1100 * time.Millisecond)
+		ticker  = tw.NewTicker(9 * time.Millisecond)
+		incr    int
+	)
+
+	for run := true; run; {
+		select {
+		case <-timeout:
+			run = false
+
+		case <-ticker.C:
+			incr++
+		}
+	}
+
+	assert.Greater(t, incr, 100)
+}
+
 func TestBatchTicker(t *testing.T) {
 	tw, err := NewTimeWheel(100*time.Millisecond, 60)
 	assert.Nil(t, err)
@@ -334,6 +360,45 @@ func TestTimerReset(t *testing.T) {
 		after := index*1000 + 200
 
 		checkTimeCost(t, now, time.Now(), before, after)
+	}
+}
+
+func TestTickerReset(t *testing.T) {
+	tw, _ := NewTimeWheel(100*time.Millisecond, 50)
+	tw.Start()
+	defer tw.Stop()
+
+	ticker := tw.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for index := 1; index < 6; index++ {
+		now := time.Now()
+		<-ticker.C
+
+		checkTimeCost(t, now, time.Now(), 80, 220)
+		fmt.Println(time.Since(now).String())
+	}
+
+	fmt.Println()
+	ticker.Reset(300 * time.Millisecond)
+
+	for index := 1; index < 6; index++ {
+		now := time.Now()
+		<-ticker.C
+
+		checkTimeCost(t, now, time.Now(), 280, 420)
+		fmt.Println(time.Since(now).String())
+	}
+
+	fmt.Println()
+	ticker.Reset(200 * time.Millisecond)
+
+	for index := 1; index < 6; index++ {
+		now := time.Now()
+		<-ticker.C
+
+		checkTimeCost(t, now, time.Now(), 180, 320)
+		fmt.Println(time.Since(now).String())
 	}
 }
 

@@ -126,6 +126,7 @@ func (tw *TimeWheel) Start() {
 	tw.onceStart.Do(
 		func() {
 			tw.ticker = time.NewTicker(tw.tick)
+			tw.exited = false
 			go tw.schduler()
 			go tw.tickGenerator()
 		},
@@ -237,7 +238,7 @@ func (tw *TimeWheel) AddCron(delay time.Duration, callback func()) *Task {
 }
 
 func (tw *TimeWheel) addAny(delay time.Duration, callback func(), circle, async bool) *Task {
-	if delay <= 0 {
+	if delay < tw.tick {
 		delay = tw.tick
 	}
 
@@ -463,6 +464,21 @@ type Ticker struct {
 
 	C   chan bool
 	Ctx context.Context
+}
+
+func (t *Ticker) Reset(delay time.Duration) {
+	// first stop old task
+	t.task.stop = true
+
+	// make new task
+	t.task = t.tw.addAny(
+		delay,
+		func() {
+			notfiyChannel(t.C)
+		},
+		modeIsCircle,
+		modeNotAsync,
+	)
 }
 
 func (t *Ticker) Stop() {
